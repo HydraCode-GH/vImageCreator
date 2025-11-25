@@ -1,16 +1,55 @@
----
 Config = {}
-Config.DiscordWebHook = 'https://discord.com/api/webhooks/905382029066113044/m4O7_m3jwcyzbL0WnwmujG0V79lwQI-3tl_iWRviXbbKo1RKoXs2-vtPDGpKdC7tHkpS'
-Config.save = 'json' -- kvp, json
-Config.vehicle_table = 'vehicles' -- vehicle table must have model column (name not hash)
-Config.useSQLvehicle = true -- use mysql async to fetch vehicle table else SqlVehicleTable will use
-Config.SqlVehicleTable = QBCore and QBCore.Shared and QBCore.Shared.Vehicles and QBCore.Shared.Vehicles or {} -- example qbcore shared vehicle
 
--- Custom Category
-Config.Category = 'all' -- select a custom category | set this to 'all' if you want to Screenshot all vehicle categories
+-- Discord Webhook Configuration
+Config.DiscordWebHook = 'https://discord.com/api/webhooks/XXXXX'
 
--- Permission
-Config.owners = {
-    ['license:df845523fc29c5159ece179359f22a741ca2ca9a'] = true,
-    --add more here
+-- Data Storage Configuration
+Config.Storage = {
+    method = 'json', -- Options: 'json', 'kvp'
+    vehicleTable = 'vehicles' -- Database table name (must have 'model' column)
 }
+
+-- Vehicle Data Source Configuration
+Config.VehicleSource = {
+    useSQL = true, -- Use MySQL async to fetch vehicles
+    fallbackTable = QBCore and QBCore.Shared and QBCore.Shared.Vehicles or {} -- Fallback vehicle table
+}
+
+-- Vehicle Filtering Configuration
+Config.Filtering = {
+    category = 'all' -- Vehicle category filter ('all' to include all categories)
+}
+
+-- Permissions Configuration
+Config.Permissions = {
+    owners = {
+        ['license:XXXX'] = true,
+        -- Add more license identifiers here:
+        -- ['license:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'] = true,
+    }
+}
+
+-- Optional: Category-specific settings (if not using 'all')
+-- Config.Filtering.categories = {
+--     'compacts',
+--     'sedans', 
+--     'suvs',
+--     'coupes',
+--     'muscle',
+--     'sports',
+--     'super',
+--     'motorcycles',
+--     'offroad',
+--     'industrial',
+--     'utility',
+--     'vans',
+--     'cycles',
+--     'boats',
+--     'helicopters',
+--     'planes',
+--     'service',
+--     'emergency',
+--     'military',
+--     'commercial',
+--     'trains'
+-- }

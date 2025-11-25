@@ -1,56 +1,115 @@
-local resultVehicles
+local resultVehicles = {}
 local thumbs = {}
 
-RegisterCommand('getperms', function(source, args, rawCommand)
-    for i = 0 , GetNumPlayerIdentifiers(source) do
-        if GetPlayerIdentifier(source,i) and Config.owners[GetPlayerIdentifier(source,i)] then
-            local ply = Player(source).state
-            ply.screenshotperms = true
-            print("Player ID: "..source.." Granted Permission to use Screenshot Vehicle \n Commands: \n Start Screen Shot Vehicle /startscreenshot \n Reset screenshot index (last vehicle number for continuation purpose) /resetscreenshot")
+local CONFIG = {
+    save = Config.save or 'kvp',
+    useSQLvehicle = Config.useSQLvehicle or false,
+    vehicle_table = Config.vehicle_table or 'vehicles',
+    Category = Config.Category or 'all',
+    SqlVehicleTable = Config.SqlVehicleTable or {},
+    owners = Config.owners or {}
+}
+
+local function HasPermission(source)
+    for i = 0, GetNumPlayerIdentifiers(source) do
+        local identifier = GetPlayerIdentifier(source, i)
+        if identifier and CONFIG.owners[identifier] then
+            return true
         end
+    end
+    return false
+end
+
+local function LoadThumbnails()
+    if CONFIG.save == 'kvp' then
+        return json.decode(GetResourceKvpString('thumbnails') or '[]') or {}
+    else
+        return json.decode(LoadResourceFile('vImageCreator', 'thumbnails.json') or '[]') or {}
+    end
+end
+
+local function SaveThumbnails(thumbnails)
+    if CONFIG.save == 'kvp' then
+        SetResourceKvp('thumbnails', json.encode(thumbnails))
+    else
+        SaveResourceFile("vImageCreator", "thumbnails.json", json.encode(thumbnails), -1)
+    end
+end
+
+local function LoadVehicles()
+    if CONFIG.useSQLvehicle then
+        return MySQL.Sync.fetchAll('SELECT * FROM ' .. CONFIG.vehicle_table) or {}
+    else
+        return CONFIG.SqlVehicleTable or {}
+    end
+end
+
+local function FilterVehiclesByCategory(vehicles)
+    if CONFIG.Category == 'all' then
+        return vehicles
+    end
+    
+    local filtered = {}
+    for _, vehicle in ipairs(vehicles) do
+        if vehicle.category == CONFIG.Category then
+            filtered[#filtered + 1] = vehicle
+        end
+    end
+    return filtered
+end
+
+local function NormalizeThumbnails(thumbnails)
+    local normalized = {}
+    local count = 0
+    
+    for modelHash, imageUrl in pairs(thumbnails) do
+        normalized[tostring(modelHash)] = imageUrl
+        count = count + 1
+    end
+    
+    return normalized, count
+end
+
+-- Command Handlers
+RegisterCommand('getperms', function(source)
+    if not source or source == 0 then return end
+    
+    if HasPermission(source) then
+        local playerState = Player(source).state
+        playerState.screenshotperms = true
+        
+        print(("Player ID: %d Granted Permission to use Screenshot Vehicle\nCommands:\nStart Screen Shot Vehicle /startscreenshot\nReset screenshot index (last vehicle number for continuation purpose) /resetscreenshot"):format(source))
     end
 end)
 
-Citizen.CreateThread(function()
-    if Config.save == 'kvp' then
-        thumbs = json.decode(GetResourceKvpString('thumbnails') or '[]') or {}
-    else
-        thumbs = json.decode(LoadResourceFile('vImageCreator', 'thumbnails.json') or '[]') or {}
-    end
-    if Config.useSQLvehicle then
-        resultVehicles = MySQL.Sync.fetchAll('SELECT * FROM '..Config.vehicle_table)
-    else
-        resultVehicles = Config.SqlVehicleTable
-    end
-    local temp = {}
-    if Config.Category ~= 'all' then
-        for k,v in pairs(resultVehicles) do
-            if v.category == Config.Category then
-                table.insert(temp,v)
-            end
-        end
-    else
-        temp = resultVehicles
-    end
-    GlobalState.VehiclesFromDB = temp
-    local thumbtemp = {}
-    local c = 0
-    for k,v in pairs(thumbs) do
-        local k = tostring(k)
-        thumbtemp[k] = v
-        c = c + 1
-    end
-    GlobalState.VehicleImages = thumbtemp
-end)
-
-RegisterNetEvent("renzu_vehthumb:save")
-AddEventHandler("renzu_vehthumb:save", function(data)
-    local modelhash = GetHashKey(data.model)
-    thumbs[tostring(modelhash)] = data.img
-    if Config.save == 'kvp' then
-        SetResourceKvp('thumbnails',json.encode(thumbs))
-    else
-        SaveResourceFile("vImageCreator", "thumbnails.json", json.encode(thumbs), -1)
-    end
+-- Event Handlers
+RegisterNetEvent("renzu_vehthumb:save", function(data)
+    if not data or not data.model then return end
+    
+    local modelHash = tostring(GetHashKey(data.model))
+    thumbs[modelHash] = data.img
+    
+    SaveThumbnails(thumbs)
     GlobalState.VehicleImages = thumbs
+    
+    print(("Vehicle thumbnail saved for model: %s"):format(data.model))
+end)
+
+-- Initialization
+CreateThread(function()
+    -- Load thumbnails
+    thumbs = LoadThumbnails()
+    
+    -- Load vehicles
+    resultVehicles = LoadVehicles()
+    
+    -- Filter vehicles by category if needed
+    local filteredVehicles = FilterVehiclesByCategory(resultVehicles)
+    GlobalState.VehiclesFromDB = filteredVehicles
+    
+    -- Normalize and set thumbnails
+    local normalizedThumbs, thumbCount = NormalizeThumbnails(thumbs)
+    GlobalState.VehicleImages = normalizedThumbs
+    
+    print(("Initialization complete - %d vehicles loaded, %d thumbnails cached"):format(#filteredVehicles, thumbCount))
 end)
