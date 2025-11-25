@@ -1,0 +1,35 @@
+name: Lint
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run luacheck
+        uses: iLLeniumStudios/fivem-lua-lint-action@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: false
+          capture: "junit.xml"
+          args: "-t --formatter JUnit"
+
+      - name: Generate Lint Report
+        if: always()
+        uses: mikepenz/action-junit-report@v3
+        with:
+          report_paths: "./junit.xml"
+          check_name: "Linting Report"
+          fail_on_failure: false
