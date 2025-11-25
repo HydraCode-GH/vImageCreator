@@ -44,6 +44,12 @@ exports('GetModelImage', function(model)
     return GlobalState.VehicleImages[tostring(modelHash)] or DEFAULT_IMAGE
 end)
 
+-- Utility Functions
+local function GetVehicleFov(vehicle)
+    local class = tostring(GetVehicleClass(vehicle))
+    return VEHICLE_CLASS_FOV[class] or 40.0
+end
+
 local function ReqAndDelete(entity)
     if not DoesEntityExist(entity) then return end
 
@@ -78,6 +84,11 @@ local function SetPlayerCoords(ped, coords, heading)
     SetEntityCoords(ped, x + 5.0, y - 5.0, z)
     SetEntityHeading(ped, heading)
     DoScreenFadeIn(3000)
+end
+
+-- Arena Functions
+local function UnloadArena()
+    RemoveIpl('xs_arena_interior')
 end
 
 local function LoadArena()
@@ -146,11 +157,9 @@ local function SpawnVehicleLocal(model)
     LastVehicleFromGarage = CreateVehicle(hash, ARENA_COORD, 90.0, 0, 1)
     while not DoesEntityExist(LastVehicleFromGarage) do Wait(0) end
 
-    -- Calculate FOV based on vehicle size
-    local minDim, maxDim = GetModelDimensions(hash)
-    local modelSize = maxDim - minDim
-    local fov = (modelSize.x * modelSize.y * modelSize.z) + 20
-    SetCamFov(cam, fov)
+    -- Use VEHICLE_CLASS_FOV for camera FOV instead of size calculation
+    local vehicleFov = GetVehicleFov(LastVehicleFromGarage)
+    SetCamFov(cam, vehicleFov)
 
     SetEntityHeading(LastVehicleFromGarage, 80.117)
     FreezeEntityPosition(LastVehicleFromGarage, true)
@@ -266,7 +275,7 @@ local function StartScreenShoting()
         end
     end
 
-    -- Cleanup
+    -- Cleanup - Use UnloadArena here
     while screenshot do
         Wait(111)
     end
@@ -277,6 +286,7 @@ local function StartScreenShoting()
     SetCamActive(cam, false)
     CellCamActivate(false, false)
     InShowRoom(false)
+    UnloadArena() -- Clean up the arena IPL
     SetEntityCoords(ped, returnCoord)
     Wait(200)
     FreezeEntityPosition(ped, false)
