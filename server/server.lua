@@ -48,7 +48,7 @@ local function FilterVehiclesByCategory(vehicles)
     if CONFIG.Category == 'all' then
         return vehicles
     end
-    
+
     local filtered = {}
     for _, vehicle in ipairs(vehicles) do
         if vehicle.category == CONFIG.Category then
@@ -61,23 +61,23 @@ end
 local function NormalizeThumbnails(thumbnails)
     local normalized = {}
     local count = 0
-    
+
     for modelHash, imageUrl in pairs(thumbnails) do
         normalized[tostring(modelHash)] = imageUrl
         count = count + 1
     end
-    
+
     return normalized, count
 end
 
 -- Command Handlers
 RegisterCommand('getperms', function(source)
     if not source or source == 0 then return end
-    
+
     if HasPermission(source) then
         local playerState = Player(source).state
         playerState.screenshotperms = true
-        
+
         print(("Player ID: %d Granted Permission to use Screenshot Vehicle\nCommands:\nStart Screen Shot Vehicle /startscreenshot\nReset screenshot index (last vehicle number for continuation purpose) /resetscreenshot"):format(source))
     end
 end)
@@ -85,13 +85,13 @@ end)
 -- Event Handlers
 RegisterNetEvent("renzu_vehthumb:save", function(data)
     if not data or not data.model then return end
-    
+
     local modelHash = tostring(GetHashKey(data.model))
     thumbs[modelHash] = data.img
-    
+
     SaveThumbnails(thumbs)
     GlobalState.VehicleImages = thumbs
-    
+
     print(("Vehicle thumbnail saved for model: %s"):format(data.model))
 end)
 
@@ -99,17 +99,17 @@ end)
 CreateThread(function()
     -- Load thumbnails
     thumbs = LoadThumbnails()
-    
+
     -- Load vehicles
     resultVehicles = LoadVehicles()
-    
+
     -- Filter vehicles by category if needed
     local filteredVehicles = FilterVehiclesByCategory(resultVehicles)
     GlobalState.VehiclesFromDB = filteredVehicles
-    
+
     -- Normalize and set thumbnails
     local normalizedThumbs, thumbCount = NormalizeThumbnails(thumbs)
     GlobalState.VehicleImages = normalizedThumbs
-    
+
     print(("Initialization complete - %d vehicles loaded, %d thumbnails cached"):format(#filteredVehicles, thumbCount))
 end)

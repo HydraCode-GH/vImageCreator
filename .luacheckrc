@@ -340,6 +340,12 @@ stds.ox_lib = {
     }
 }
 
+stds.oxmysql = {
+    read_globals = {
+        "MySQL"
+    }
+}
+
 -- manifest
 files["**/fxmanifest.lua"].std = "max+cfx_manifest"
 files["**/__resource.lua"].std = "max+cfx_manifest"
@@ -350,9 +356,9 @@ files["**/client.lua"].std = "max+cfx+cfx_cl_deprecated+cfx_cl+ox_lib"
 files["**/cl_*.lua"].std = "max+cfx+cfx_cl_deprecated+cfx_cl+ox_lib"
 files["**/client/**/*.lua"].std = "max+cfx+cfx_cl_deprecated+cfx_cl+ox_lib"
 -- server
-files["**/server.lua"].std = "max+cfx+cfx_sv+ox_lib"
-files["**/sv_*.lua"].std = "max+cfx+cfx_sv+ox_lib"
-files["**/server/**/*.lua"].std = "max+cfx+cfx_sv+ox_lib"
+files["**/server.lua"].std = "max+cfx+cfx_sv+ox_lib+oxmysql"
+files["**/sv_*.lua"].std = "max+cfx+cfx_sv+ox_lib+oxmysql"
+files["**/server/**/*.lua"].std = "max+cfx+cfx_sv+ox_lib+oxmysql"
 -- shared
 files["**/shared.lua"].std="max+cfx+cfx_sv+cfx_cl_deprecated+cfx_cl"
 files["**/shared/**/*.lua"].std="max+cfx+cfx_sv+cfx_cl_deprecated+cfx_cl"

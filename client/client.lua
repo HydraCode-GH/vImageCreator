@@ -44,24 +44,18 @@ exports('GetModelImage', function(model)
     return GlobalState.VehicleImages[tostring(modelHash)] or DEFAULT_IMAGE
 end)
 
--- Utility Functions
-local function GetVehicleFov(vehicle)
-    local class = tostring(GetVehicleClass(vehicle))
-    return VEHICLE_CLASS_FOV[class] or 40.0
-end
-
 local function ReqAndDelete(entity)
     if not DoesEntityExist(entity) then return end
-    
+
     NetworkRequestControlOfEntity(entity)
-    
+
     local attempts = 0
     while not NetworkHasControlOfEntity(entity) and attempts < 100 and DoesEntityExist(entity) do
         NetworkRequestControlOfEntity(entity)
         Wait(11)
         attempts = attempts + 1
     end
-    
+
     DetachEntity(entity, 0, false)
     SetEntityCollision(entity, false, false)
     SetEntityAlpha(entity, 0.0, true)
@@ -73,22 +67,17 @@ end
 local function SetPlayerCoords(ped, coords, heading)
     local x, y, z = table.unpack(coords)
     RequestCollisionAtCoord(x, y, z)
-    
+
     while not HasCollisionLoadedAroundEntity(ped) do
         RequestCollisionAtCoord(x, y, z)
         Wait(1)
     end
-    
+
     DoScreenFadeOut(950)
     Wait(1000)
     SetEntityCoords(ped, x + 5.0, y - 5.0, z)
     SetEntityHeading(ped, heading)
     DoScreenFadeIn(3000)
-end
-
--- Arena Functions
-local function UnloadArena()
-    RemoveIpl('xs_arena_interior')
 end
 
 local function LoadArena()
@@ -97,7 +86,7 @@ local function LoadArena()
     RequestIpl("xs_arena_banners_ipl")
 
     local interiorID = GetInteriorAtCoords(2800.000, -3800.000, 100.000)
-    
+
     if not IsInteriorReady(interiorID) then
         Wait(1)
     end
@@ -125,14 +114,14 @@ local loading = false
 
 local function SpawnVehicleLocal(model)
     if loading or GetNumberOfStreamingRequests() > 0 then return end
-    
+
     local ped = PlayerPedId()
-    
+
     -- Clean up existing vehicles
     if LastVehicleFromGarage then
         ReqAndDelete(LastVehicleFromGarage)
     end
-    
+
     for _ = 1, 2 do
         local nearbyVeh = GetClosestVehicle(GetEntityCoords(ped), 2.0, 0, 70)
         if DoesEntityExist(nearbyVeh) then
@@ -168,7 +157,7 @@ local function SpawnVehicleLocal(model)
     SetEntityCollision(LastVehicleFromGarage, false)
     SetVehicleDirtLevel(LastVehicleFromGarage, 0.0)
     SetVehicleEngineOn(LastVehicleFromGarage, true, true, false)
-    
+
     SetModelAsNoLongerNeeded(hash)
     Wait(500)
 end
@@ -186,27 +175,27 @@ end
 
 local function StartScreenShoting()
     InShowRoom(true)
-    
+
     local returnCoord = GetEntityCoords(PlayerPedId())
     screenshot = true
     local ped = PlayerPedId()
-    
+
     FreezeEntityPosition(ped, true)
     CreateLocation()
-    
+
     while not IsIplActive("xs_arena_interior") do Wait(0) end
 
     RequestCollisionAtCoord(ARENA_COORD.x, ARENA_COORD.y, ARENA_COORD.z)
-    
+
     -- Setup camera
-    cam = CreateCamWithParams("DEFAULT_SCRIPTED_CAMERA", CAM_COORD.x, CAM_COORD.y, CAM_COORD.z, 
+    cam = CreateCamWithParams("DEFAULT_SCRIPTED_CAMERA", CAM_COORD.x, CAM_COORD.y, CAM_COORD.z,
                              360.0, 0.0, 0.0, 60.0, false, 0)
     PointCamAtCoord(cam, ARENA_COORD.x, ARENA_COORD.y, ARENA_COORD.z + 0.1)
     SetCamActive(cam, true)
     SetCamFov(cam, 42.0)
     SetCamRot(cam, -15.0, 0.0, 252.063)
     RenderScriptCams(true, true, 1, true, true)
-    
+
     SetFocusPosAndVel(ARENA_COORD.x, ARENA_COORD.y, ARENA_COORD.z, 0.0, 0.0, 0.0)
     DisplayHud(false)
     DisplayRadar(false)
@@ -215,9 +204,9 @@ local function StartScreenShoting()
     CreateThread(function()
         while screenshot do
             Wait(0)
-            DrawLightWithRange(ARENA_COORD.x - 4.0, ARENA_COORD.y - 3.0, ARENA_COORD.z + 0.3, 
+            DrawLightWithRange(ARENA_COORD.x - 4.0, ARENA_COORD.y - 3.0, ARENA_COORD.z + 0.3,
                              255, 255, 255, 40.0, 15.0)
-            DrawSpotLight(ARENA_COORD.x - 4.0, ARENA_COORD.y + 5.0, ARENA_COORD.z, ARENA_COORD, 
+            DrawSpotLight(ARENA_COORD.x - 4.0, ARENA_COORD.y + 5.0, ARENA_COORD.z, ARENA_COORD,
                         255, 255, 255, 20.0, 1.0, 1.0, 20.0, 0.95)
         end
     end)
@@ -227,50 +216,50 @@ local function StartScreenShoting()
     -- Process vehicles for screenshots
     local vehicles = GlobalState.VehiclesFromDB or {}
     print(#vehicles, 'total vehicles')
-    
+
     for i = LocalPlayer.state.screenshotnum or 1, #vehicles do
         if not screenshot then break end
-        
+
         LocalPlayer.state.screenshotnum = i + 1
         SetResourceKvpInt('screenshotnum', LocalPlayer.state.screenshotnum)
-        
+
         local vehicle = vehicles[i]
         local modelHash = GetHashKey(vehicle.model)
-        
+
         print(vehicle.model, 'model')
-        
+
         if IsModelInCdimage(modelHash) and not GlobalState.VehicleImages[tostring(modelHash)] then
             CreateMobilePhone(1)
             CellCamActivate(true, true)
             Wait(100)
-            
+
             SpawnVehicleLocal(vehicle.model)
-            
+
             local wait = promise.new()
             exports['screenshot-basic']:requestScreenshotUpload(Config.DiscordWebHook, 'files', function(data)
                 local image = json.decode(data)
                 DestroyMobilePhone()
                 CellCamActivate(false, false)
-                
+
                 if not image or not image.attachments or not image.attachments[1] or not image.attachments[1].proxy_url then
                     print("HOST UPLOAD ERROR")
                     screenshot = false
                     wait:resolve(nil)
                     return
                 end
-                
+
                 print(image.attachments[1].proxy_url)
                 local imageData = {
                     model = vehicle.model,
                     img = image.attachments[1].proxy_url
                 }
-                
+
                 TriggerServerEvent('renzu_vehthumb:save', imageData)
                 print("Vehicle Image Saved")
                 Wait(500)
                 wait:resolve(image)
             end)
-            
+
             Await(wait)
         else
             print(vehicle.model, ' already exists')
@@ -281,7 +270,7 @@ local function StartScreenShoting()
     while screenshot do
         Wait(111)
     end
-    
+
     RenderScriptCams(false)
     DestroyAllCams(true)
     ClearFocus()
